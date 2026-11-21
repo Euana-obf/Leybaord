@@ -204,109 +204,19 @@ HTML = """
   <footer>iPhone 최적화 · 렌더 배포용</footer>
 
 <script>
-const WORDS = {{ words | tojson }};
-const SENTENCES = {{ sentences | tojson }};
-let mode = localStorage.getItem("mode") || "word";
-let pool = mode === "sentence" ? SENTENCES : WORDS;
-let current = "";
-let score = 0;
-let streak = 0;
-let bestKey = () => "best_" + mode;
-let best = parseInt(localStorage.getItem(bestKey()) || "0");
-
-const $ = id => document.getElementById(id);
-$("best").textContent = best;
-$("count").textContent = `풀: ${pool.length}개`;
-
-function setMode(m) {
-  mode = m;
-  localStorage.setItem("mode", mode);
-  pool = mode === "sentence" ? SENTENCES : WORDS;
-  best = parseInt(localStorage.getItem(bestKey()) || "0");
-  $("best").textContent = best;
-  $("count").textContent = `풀: ${pool.length}개`;
-  $("btnWord").classList.toggle("active", mode === "word");
-  $("btnSentence").classList.toggle("active", mode === "sentence");
-  score = 0;
-  streak = 0;
-  $("score").textContent = 0;
-  $("streak").textContent = 0;
-  next();
-}
-
-function next() {
-  current = pool[Math.floor(Math.random() * pool.length)];
-  $("target").textContent = current;
-  const inp = $("input");
-  inp.value = "";
-  inp.className = "";
-  $("msg").textContent = "";
-  $("bar").style.width = "0%";
-  inp.focus();
-}
-
-function check() {
-  const inp = $("input");
-  const val = inp.value;
-  if (val === current) {
-    score++;
-    streak++;
-    if (streak > best) {
-      best = streak;
-      localStorage.setItem(bestKey(), best);
-      $("best").textContent = best;
-    }
-    $("score").textContent = score;
-    $("streak").textContent = streak;
-    $("msg").textContent = "정답!";
-    $("msg").className = "msg";
-    inp.className = "correct";
-    setTimeout(next, 320);
-    return;
-  }
-  if (current.startsWith(val)) {
-    inp.className = "";
-    $("bar").style.width = (val.length / current.length * 100) + "%";
-    $("msg").textContent = "";
-  } else {
-    inp.className = "wrong";
-    streak = 0;
-    $("streak").textContent = 0;
-    $("msg").textContent = "틀림";
-    $("msg").className = "msg err";
-  }
-}
-
-$("btnWord").onclick = () => setMode("word");
-$("btnSentence").onclick = () => setMode("sentence");
-$("input").addEventListener("input", check);
-$("input").addEventListener("keydown", e => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    if ($("input").value === current) next();
-  }
-});
-$("skip").onclick = () => {
-  streak = 0;
-  $("streak").textContent = 0;
-  next();
-};
-$("reset").onclick = () => {
-  score = 0;
-  streak = 0;
-  $("score").textContent = 0;
-  $("streak").textContent = 0;
-  next();
-};
-
-// restore mode ui
-$("btnWord").classList.toggle("active", mode === "word");
-$("btnSentence").classList.toggle("active", mode === "sentence");
-next();
-
-document.body.addEventListener("touchstart", () => {
-  $("input").focus();
-}, {passive: true});
+const WORDS = {{ words | tojson }}, SENTENCES = {{ sentences | tojson }};
+let mode=localStorage.getItem("mode")||"word", pool=mode==="sentence"?SENTENCES:WORDS;
+let current="",score=0,streak=0,best=+(localStorage.getItem("best_"+mode)||0),composing=false,timer=null;
+const $=id=>document.getElementById(id);
+function update(){ $("count").textContent=`풀: ${pool.length}개`; }
+function next(){clearTimeout(timer);timer=null;current=pool[Math.floor(Math.random()*pool.length)]||"";$("target").textContent=current;$("input").value="";$("input").className="";$("msg").textContent="";$("msg").className="msg";$("bar").style.width="0%";$("input").focus();}
+function setMode(m){mode=m;localStorage.setItem("mode",m);pool=m==="sentence"?SENTENCES:WORDS;best=+(localStorage.getItem("best_"+mode)||0);$("best").textContent=best;score=streak=0;$("score").textContent=0;$("streak").textContent=0;$("btnWord").classList.toggle("active",m==="word");$("btnSentence").classList.toggle("active",m==="sentence");update();next();}
+function check(){let v=$("input").value;if(composing||$("input").isComposing)return;if(v===current){$("input").className="correct";$("msg").textContent="정답!";score++;streak++;if(streak>best){best=streak;localStorage.setItem("best_"+mode,best);$("best").textContent=best;}$("score").textContent=score;$("streak").textContent=streak;if(!timer)timer=setTimeout(next,320);}else if(current.startsWith(v)){$("input").className="";$("bar").style.width=(v.length/current.length*100)+"%";$("msg").textContent="";}else{$("input").className="wrong";streak=0;$("streak").textContent=0;$("msg").textContent="틀림";$("msg").className="msg err";}}
+$("btnWord").onclick=()=>setMode("word");$("btnSentence").onclick=()=>setMode("sentence");
+$("input").addEventListener("compositionstart",()=>composing=true);$("input").addEventListener("compositionend",()=>{composing=false;check();});$("input").addEventListener("input",check);
+$("input").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();if($("input").value===current)next();}});
+$("skip").onclick=()=>{streak=0;$("streak").textContent=0;next();};$("reset").onclick=()=>{score=streak=0;$("score").textContent=$("streak").textContent=0;next();};
+$("best").textContent=best;$("btnWord").classList.toggle("active",mode==="word");$("btnSentence").classList.toggle("active",mode==="sentence");update();next();document.body.addEventListener("touchstart",()=> $("input").focus(),{passive:true});
 </script>
 </body>
 </html>
